@@ -1,5 +1,5 @@
-[functions]
-  directory = "netlify/functions"
+[build]
+  functions = "netlify/functions"
   node_bundler = "esbuild"
 
 [dev]
@@ -12,3 +12,7 @@
     from = "/fn/*"
     to   = "/.netlify/functions/:splat"
     status = 200
+
+[functions]
+      external_node_modules = []
+      included_files = ["netlify/lib/**"]

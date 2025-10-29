@@ -26,8 +26,6 @@ export async function uploadToTeleport(opts: {
             return `mock-etag-${Date.now()}`;
         }
 
-
-
         let attempt = 0;
         while (true) {
             try {
@@ -47,7 +45,7 @@ export async function uploadToTeleport(opts: {
     // 1) create capture
     onPhase?.("creating");
     const input_data_format = file.name.toLowerCase().endsWith(".zip") ? "bulk-images" : "video";
-    const { eid, num_parts, chunk_size } = await fetchJSON("/fn/teleport-create-capture", {
+    const { eid, num_parts, chunk_size } = await fetchJSON("/.netlify/functions/teleport-create-capture", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ name: file.name, bytesize: file.size, input_data_format }),
@@ -70,7 +68,7 @@ export async function uploadToTeleport(opts: {
                 active++;
                 (async () => {
                     try {
-                        const { upload_url } = await fetchJSON("/fn/teleport-upload-url", {
+                        const { upload_url } = await fetchJSON("/.netlify/functions/teleport-upload-url", {
                             method: "POST",
                             headers: { "content-type": "application/json" },
                             body: JSON.stringify({ eid, part_no: partNo, bytesize: file.size }),
@@ -101,7 +99,7 @@ export async function uploadToTeleport(opts: {
 
     // 3) complete
     onPhase?.("completing");
-    await fetchJSON("/fn/teleport-complete-upload", {
+    await fetchJSON("/.netlify/functions/teleport-complete-upload", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ eid, parts }),
