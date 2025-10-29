@@ -2,12 +2,6 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
-[build]
-  command = "npm run build"
-  publish = "dist"
-
-[[headers]]
-  for = "/"
-  [headers.values]
-  # allow your app to call your own functions
-  Access-Control-Allow-Origin = "*"
+[dev]
+  # optional if you want .env loading
+  env_files = [".env"]

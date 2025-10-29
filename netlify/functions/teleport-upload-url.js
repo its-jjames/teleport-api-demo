@@ -1,23 +1,1 @@
-// netlify/functions/teleport-upload-url.js
-import { getTeleportToken } from "./_teleportAuth.js";
-
-export default async (req) => {
-    try {
-        const { eid, part_no, bytesize } = await req.json();
-        const token = await getTeleportToken();
-
-        const res = await fetch(`${process.env.TELEPORT_API_BASE}/api/v1/captures/${eid}/create-upload-url/${part_no}`, {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${token}`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ eid, bytesize })
-        });
-
-        if (!res.ok) return new Response(await res.text(), { status: res.status });
-        return new Response(await res.text(), { status: 200, headers: { "Content-Type": "application/json" } });
-    } catch (e) {
-        return new Response(e.message, { status: 500 });
-    }
-};
+import { getTeleportToken, apiBase } from "./_teleportAuth.js";export default async (req) => {    try {        if (req.method !== "POST") {            return new Response("method not allowed", { status: 405 });        }        const { eid, part_no, bytesize } = await req.json();        if (!eid || !part_no || typeof bytesize !== "number") {            return new Response("missing required fields", { status: 400 });        }        const token = await getTeleportToken();        const r = await fetch(`${apiBase()}/api/v1/captures/${encodeURIComponent(eid)}/create-upload-url/${encodeURIComponent(part_no)}`, {            method: "POST",            headers: {                "authorization": `Bearer ${token}`,                "content-type": "application/json"            },            body: JSON.stringify({ eid, bytesize })        });        const text = await r.text();        if (!r.ok) return new Response(text, { status: r.status });        return new Response(text, { status: 200, headers: { "content-type": "application/json" } });    } catch (e) {        return new Response(e.message || "server error", { status: 500 });    }};

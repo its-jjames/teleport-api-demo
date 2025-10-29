@@ -5,27 +5,21 @@ export default async (req) => {
         if (req.method !== "POST") {
             return new Response("method not allowed", { status: 405 });
         }
-        const { name, bytesize, input_data_format, num_frames, guided_mode } = await req.json();
+        const { eid, parts } = await req.json();
 
-        if (!name || typeof bytesize !== "number" || !input_data_format) {
+        if (!eid || !Array.isArray(parts) || parts.length === 0) {
             return new Response("missing required fields", { status: 400 });
         }
 
         const token = await getTeleportToken();
 
-        const r = await fetch(`${apiBase()}/api/v1/captures`, {
+        const r = await fetch(`${apiBase()}/api/v1/captures/${encodeURIComponent(eid)}/uploaded`, {
             method: "POST",
             headers: {
                 "authorization": `Bearer ${token}`,
                 "content-type": "application/json"
             },
-            body: JSON.stringify({
-                name,
-                bytesize,
-                input_data_format,  // "bulk-images" or "video" (.mp4)
-                num_frames,
-                guided_mode
-            })
+            body: JSON.stringify({ eid, parts })
         });
 
         const text = await r.text();
