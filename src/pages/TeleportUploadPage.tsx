@@ -23,9 +23,9 @@ import { cn } from "@/lib/utils";
 const RES_CHOICES = [1600, 2500, 3200] as const;
 
 const PRESETS = [
-    { id: "basic", name: "basic", desc: "fast result for quick previews", res: 1600, iters: 7000, sh: 0 as 0|3, lod: true, splatAuto: true },
-    { id: "balanced", name: "balanced", desc: "good quality without long waits", res: 2500, iters: 20000, sh: 3 as 0|3, lod: true, splatAuto: true },
-    { id: "maximum", name: "maximum", desc: "highest quality; longer processing", res: 3200, iters: 30000, sh: 3 as 0|3, lod: true, splatAuto: true },
+    { id: "fastest", name: "fastest", desc: "fast result for quick previews", res: 1600, iters: 7000, sh: 0 as 0|3, lod: true, splatAuto: true },
+    { id: "balanced", name: "balanced", desc: "good quality without long waits", res: 2500, iters: 20000, sh: 0 as 0|3, lod: true, splatAuto: true },
+    { id: "best", name: "best", desc: "highest quality; longer processing", res: 3200, iters: 30000, sh: 3 as 0|3, lod: true, splatAuto: true },
 ] as const;
 
 function formatBytes(bytes: number) {
@@ -286,7 +286,7 @@ export default function TeleportUploadPage() {
                         <p className="text-sm text-muted-foreground">zip of images or mp4. max 10 GB.</p>
                     </div>
                     <div className="hidden md:flex items-center gap-3">
-                        <Badge variant="outline">beta</Badge>
+                        <Badge variant="outline">Upload API Demo</Badge>
                     </div>
                 </div>
             </div>
@@ -305,7 +305,7 @@ export default function TeleportUploadPage() {
                     </div>
 
                     {step === 1 && (
-                        <Card>
+                        <Card className={"border-muted-foreground/20"}>
                             <CardHeader>
                                 <CardTitle className="text-base">dataset</CardTitle>
                             </CardHeader>
@@ -396,7 +396,7 @@ export default function TeleportUploadPage() {
                     )}
 
                     {step === 2 && (
-                        <Card>
+                        <Card className={"border-muted-foreground/20"}>
                             <CardHeader>
                                 <CardTitle className="text-base">choose a preset</CardTitle>
                             </CardHeader>
@@ -425,7 +425,7 @@ export default function TeleportUploadPage() {
                     )}
 
                     {step === 3 && (
-                        <Card>
+                        <Card className={"border-muted-foreground/20"}>
                             <CardHeader className="flex flex-row items-center justify-between">
                                 <CardTitle className="text-base">advanced settings</CardTitle>
                                 <div className="flex items-center gap-2">
@@ -436,7 +436,7 @@ export default function TeleportUploadPage() {
                             <CardContent>
                                 <Accordion type="multiple" value={advancedOpen} onValueChange={(v)=>setAdvancedOpen(v as string[])} className="w-full">
                                     {/* resolution */}
-                                    <AccordionItem value="res">
+                                    <AccordionItem className={"border-muted-foreground/20"}value="res">
                                         <AccordionTrigger>image resolution</AccordionTrigger>
                                         <AccordionContent>
                                             <RadioGroup value={String(res)} onValueChange={(v)=>{ if (v === 'custom') return; setRes(Number(v)); setCustomRes(''); }} className="grid gap-3 sm:grid-cols-4">
@@ -457,7 +457,7 @@ export default function TeleportUploadPage() {
                                     </AccordionItem>
 
                                     {/* iterations */}
-                                    <AccordionItem value="iters">
+                                    <AccordionItem className={"border-muted-foreground/20"} value="iters">
                                         <AccordionTrigger>training iterations</AccordionTrigger>
                                         <AccordionContent>
                                             <div className="px-1">
@@ -478,7 +478,7 @@ export default function TeleportUploadPage() {
                                     </AccordionItem>
 
                                     {/* splat count */}
-                                    <AccordionItem value="splats">
+                                    <AccordionItem className={"border-muted-foreground/20"} value="splats">
                                         <AccordionTrigger>splat count</AccordionTrigger>
                                         <AccordionContent>
                                             <div className="flex items-center gap-3 mb-4">
@@ -524,7 +524,7 @@ export default function TeleportUploadPage() {
                                     </AccordionItem>
 
                                     {/* lighting */}
-                                    <AccordionItem value="lighting">
+                                    <AccordionItem className={"border-muted-foreground/20"} value="lighting">
                                         <AccordionTrigger>lighting detail</AccordionTrigger>
                                         <AccordionContent>
                                             <RadioGroup value={String(sh)} onValueChange={(v)=>setSh(Number(v) as 0|3)} className="flex gap-3">
@@ -540,7 +540,7 @@ export default function TeleportUploadPage() {
                                     </AccordionItem>
 
                                     {/* LOD */}
-                                    <AccordionItem value="lod">
+                                    <AccordionItem className={"border-muted-foreground/20"} value="lod">
                                         <AccordionTrigger>level of detail</AccordionTrigger>
                                         <AccordionContent>
                                             <div className="flex items-center justify-between rounded-xl border p-3">
@@ -571,7 +571,7 @@ export default function TeleportUploadPage() {
 
                 {/* Summary */}
                 <aside className="flex h-max flex-col gap-4">
-                    <Card>
+                    <Card className={"border-muted-foreground/20"}>
                         <CardHeader>
                             <CardTitle className="text-base">summary</CardTitle>
                         </CardHeader>
@@ -622,7 +622,7 @@ export default function TeleportUploadPage() {
                         </CardContent>
                     </Card>
 
-                    <Card>
+                    <Card className={"border-muted-foreground/20"}>
                         <CardContent className="pt-4 text-xs text-muted-foreground">
                             tips
                             <ul className="mt-2 list-disc pl-5">
