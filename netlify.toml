@@ -3,5 +3,12 @@
   node_bundler = "esbuild"
 
 [dev]
-  # optional if you want .env loading
-  env_files = [".env"]
+  # Ensures .env loads during `netlify dev`
+  env_files = ["./.env"]
+  # Optional: if you want to explicitly set the dev port
+  port = 8888
+
+  [[redirects]]
+    from = "/fn/*"
+    to   = "/.netlify/functions/:splat"
+    status = 200

@@ -15,6 +15,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Upload, Film, Image as ImageIcon, Trash2, Info, CheckCircle2 } from "lucide-react";
 import { useDropzone } from "react-dropzone";
 import { uploadToTeleport } from "../lib/uploadToTeleport";
+import { cn } from "@/lib/utils";
+
 
 
 // Types & presets
@@ -213,33 +215,66 @@ export default function TeleportUploadPage() {
 
     const onSubmit = async () => {
         // you said validation happens elsewhere; we just send the file
-        if (files.length !== 1) return;
-        const file = files[0];
+        if (files.length !== 1) {
+            setUploadError("Please select a file to upload");
+            return;
+        }
 
         setUploadError(null);
         setUploading(true);
-        setUploadPhase("creating");
+        setUploadPhase("idle");
         setPartsProgress({ done: 0, total: 0 });
 
         try {
-            const { eid } = await uploadToTeleport({
-                file,
-                concurrency: 4, // tune if you want
-                onPhase: (p) => setUploadPhase(p),
-                onPartProgress: (done, total) => setPartsProgress({ done, total }),
+            await uploadToTeleport({
+                file: files[0],
+                concurrency: 4,
+                onPhase: (phase) => {
+                    setUploadPhase(phase);
+                },
+                onPartProgress: (done, total) => {
+                    setPartsProgress({ done, total });
+                }
             });
 
-            setUploadPhase("done");
-            // you can navigate or fetch metadata here, for now just confirm:
-            alert(`upload queued successfully (${eid})`);
-        } catch (e: any) {
-            console.error(e);
-            setUploadError(e?.message || "upload failed");
-            setUploadPhase("idle");
+            // Move to next step or show success message
+            setStep(3); // Assuming step 3 is your success view
+        } catch (error: any) {
+            setUploadError(error?.message || "Upload failed");
+            console.error("Upload error:", error);
         } finally {
             setUploading(false);
         }
+
     };
+
+    // Utility function to calculate progress percentage
+    const getProgressPercent = () => {
+        if (uploadPhase === "idle") return 0;
+        if (uploadPhase === "creating") return 5;
+        if (uploadPhase === "uploading") {
+            if (partsProgress.total === 0) return 10;
+            // Uploading takes up 75% of the progress (from 10% to 85%)
+            return 10 + Math.round((partsProgress.done / partsProgress.total) * 75);
+        }
+        if (uploadPhase === "completing") return 85;
+        if (uploadPhase === "done") return 100;
+        return 0;
+    };
+
+    // Utility function to get phase description
+    const getPhaseText = () => {
+        switch (uploadPhase) {
+            case "idle": return "Ready to upload";
+            case "creating": return "Initializing upload...";
+            case "uploading": return `Uploading... ${partsProgress.done} of ${partsProgress.total} parts`;
+            case "completing": return "Finalizing upload...";
+            case "done": return "Upload complete!";
+            default: return "";
+        }
+    };
+
+
 
     return (
         <div className="min-h-screen w-full bg-background">
@@ -263,9 +298,9 @@ export default function TeleportUploadPage() {
                     {/* Stepper */}
                     <div className="flex items-center gap-3 text-sm">
                         <Step n={1} label="dataset" active={step===1} done={step>1} onClick={()=>setStep(1)} />
-                        <Separator className="w-8" />
+
                         <Step n={2} label="preset" active={step===2} done={step>2} onClick={()=>setStep(2)} />
-                        <Separator className="w-8" />
+
                         <Step n={3} label="advanced" active={step===3} done={false} onClick={()=>setStep(3)} />
                     </div>
 
@@ -447,7 +482,8 @@ export default function TeleportUploadPage() {
                                         <AccordionTrigger>splat count</AccordionTrigger>
                                         <AccordionContent>
                                             <div className="flex items-center gap-3 mb-4">
-                                                <Switch checked={splatAuto} onCheckedChange={setSplatAuto} />
+                                                <Switch checked={splatAuto} onCheckedChange={setSplatAuto} className="data-[state=checked]:bg-primary"
+                                                />
                                                 <div className="text-sm">automatic</div>
                                             </div>
                                             {!splatAuto && (
@@ -510,7 +546,7 @@ export default function TeleportUploadPage() {
                                             <div className="flex items-center justify-between rounded-xl border p-3">
                                                 <div>
                                                     <div className="text-sm">enable LOD</div>
-                                                    <div className="text-xs text-muted-foreground">reduces draw cost on web and VR. keep on unless exporting raw.</div>
+                                                    <div className="text-xs text-muted-foreground">Improves performance on lower end hardware. Keep on unless exporting raw.</div>
                                                 </div>
                                                 <Switch checked={lod} onCheckedChange={setLod} />
                                             </div>
@@ -600,6 +636,7 @@ export default function TeleportUploadPage() {
             </div>
 
             {/* Sticky footer */}
+            {/* Sticky footer */}
             <div className="sticky bottom-0 z-30 border-t bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                 <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-3">
                     {!ready ? (
@@ -613,9 +650,34 @@ export default function TeleportUploadPage() {
                     )}
                     <div className="flex items-center gap-3">
                         <Button variant="secondary" onClick={()=>setStep(Math.max(1, step-1) as 1 | 2 | 3)}>back</Button>
-                        <Button disabled={!ready} onClick={onSubmit}>upload capture</Button>
+                        <Button disabled={!ready || uploading} onClick={onSubmit}>
+                            {uploading ? 'Uploading...' : 'upload capture'}
+                        </Button>
                     </div>
                 </div>
+
+                {/* Add progress bar here */}
+                {(uploading || uploadPhase !== "idle") && (
+                    <div className="mx-auto max-w-7xl px-6 pb-3 space-y-2">
+                        <div className="flex justify-between text-sm">
+                            <span>{getPhaseText()}</span>
+                            <span>{getProgressPercent()}%</span>
+                        </div>
+                        <Progress
+                            value={getProgressPercent()}
+                            className={cn(
+                                "transition-all duration-300",
+                                uploadPhase === "done" ? "bg-green-500" : ""
+                            )}
+                        />
+
+                        {uploadError && (
+                            <div className="mt-2 text-sm text-red-500">
+                                {uploadError}
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );
