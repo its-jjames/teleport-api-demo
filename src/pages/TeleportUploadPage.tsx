@@ -17,8 +17,6 @@ import { useDropzone } from "react-dropzone";
 import { uploadToTeleport } from "../lib/uploadToTeleport";
 import { cn } from "@/lib/utils";
 
-
-
 // Types & presets
 const RES_CHOICES = [1600, 2500, 3200] as const;
 
@@ -36,13 +34,82 @@ function formatBytes(bytes: number) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 }
 
-function estimateTime(iters: number, res: number, fileCount: number) {
+// Define a separate function to calculate total image count
+function calculateTotalImageCount(
+    files: File[],
+    zipImageCount: number | null,
+    videoDurationSec: number | null
+): number {
+    // Start with any existing image count from zip files
+    let count = zipImageCount || 0;
+
+    // Add image files
+    const imageFiles = files.filter(file =>
+        file.type.startsWith('image/')
+    );
+    count += imageFiles.length;
+
+    // Calculate frames from video duration (at 2fps)
+    if (videoDurationSec !== null) {
+        const videoFrameCount = Math.ceil(videoDurationSec * 2); // 2 frames per second
+        count += videoFrameCount;
+    }
+
+    return count;
+}
+
+
+function estimateTime(iters: number, res: number, fileCount: number, inputImageCount: number = 0) {
+    // Base calculation from original parameters
     const base = iters / 7000;
     const resFactor = res / 1600;
+
+    // Incorporate input image count into calculation
+    // Using a non-linear scale based on the provided benchmarks
+    let imageFactor = 1;
+
+    if (inputImageCount > 0) {
+        // Create a curve that matches the provided benchmarks:
+        // 300 images → 10 min
+        // 1000 images → 120 min
+        // 2000 images → 360 min
+        // 3000 images → 600 min
+        if (inputImageCount <= 300) {
+            imageFactor = inputImageCount / 30; // 300/30 = 10 mins
+        } else if (inputImageCount <= 1000) {
+            // Non-linear increase between 300-1000
+            const progress = (inputImageCount - 300) / 700;
+            imageFactor = 10 + progress * 110; // Scale from 10 to 120 mins
+        } else {
+            // Exponential growth beyond 1000
+            imageFactor = 120 * Math.pow(inputImageCount / 1000, 2);
+        }
+    }
+
+    // Original data factor for file outputs
     const dataFactor = Math.min(3, 0.5 + fileCount / 500);
-    const minutes = Math.round(8 * base * resFactor * dataFactor);
+
+    // Combine all factors, weighting the image factor higher
+    const minutes = Math.round(imageFactor + (8 * base * resFactor * dataFactor));
+
     return Math.max(4, minutes);
 }
+
+function estimateCost(totalImageCount: number, estimatedTime: number) {
+    // Base cost based on processing time
+    const baseCost = Math.max(1, estimatedTime / 10);  // $1 per hour of processing, minimum $1
+
+    // Cost per image at $0.01
+    const imageCost = totalImageCount * 0.01;
+
+    // Calculate the total cost by adding base cost and per-image cost
+    const totalCost = baseCost + imageCost;
+
+    // Return cost with 2 decimal places
+    return totalCost.toFixed(2);
+}
+
+
 
 function qualityLabel(iters: number, res: number) {
     const score = iters / 7000 + res / 1600 - 1;
@@ -181,7 +248,13 @@ export default function TeleportUploadPage() {
 
     // derived
     const fileCount = files.length;
-    const minutes = useMemo(() => estimateTime(iters, res, fileCount), [iters, res, fileCount]);
+    const totalImageCount = useMemo(() =>
+            calculateTotalImageCount(files, zipImageCount, videoDurationSec),
+        [files, zipImageCount, videoDurationSec]
+    );
+    const minutes = useMemo(() => estimateTime(iters, res, fileCount, totalImageCount), [iters, res, fileCount, totalImageCount]);
+    const cost = useMemo(() => estimateCost(totalImageCount, minutes), [totalImageCount, minutes]);
+
     const qual = useMemo(() => qualityLabel(iters, res), [iters, res]);
 
     const ready = name.trim().length > 1 && files.length === 1;
@@ -282,8 +355,8 @@ export default function TeleportUploadPage() {
             <div className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                 <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
                     <div>
-                        <h1 className="text-xl font-semibold tracking-tight">upload images or video</h1>
-                        <p className="text-sm text-muted-foreground">zip of images or mp4. max 10 GB.</p>
+                        <h1 className="text-xl font-semibold tracking-tight">Upload images or video</h1>
+                        <p className="text-sm text-muted-foreground">Zip of images or mp4. max 10 GB.</p>
                     </div>
                     <div className="hidden md:flex items-center gap-3">
                         <Badge variant="outline">Upload API Demo</Badge>
@@ -460,7 +533,8 @@ export default function TeleportUploadPage() {
                                     <AccordionItem className={"border-muted-foreground/20"} value="iters">
                                         <AccordionTrigger>training iterations</AccordionTrigger>
                                         <AccordionContent>
-                                            <div className="px-1">
+                                            <div className="px-5">
+                                                <br/>
                                                 <Slider value={[iterationSliderValue]} onValueChange={onSliderChange} step={1} className="w-full" />
                                                 <div className="mt-3 flex justify-between text-xs text-muted-foreground">
                                                     <span>7k</span><span>20k</span><span>30k</span><span>40k</span><span>60k</span>
@@ -515,7 +589,8 @@ export default function TeleportUploadPage() {
                                                                 }}
                                                                 className="w-48"
                                                             />
-                                                            <p className="mt-1 text-xs text-muted-foreground">range 250 to 4,000,000. contact us for more.</p>
+                                                            <p className="mt-1 text-xs text-muted-foreground">range 250 to 4,000,000. <a
+                                                                href="https://teleport.varjo.com/product-pages/contact-us" className="underline">contact us</a> for more.</p>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -559,7 +634,8 @@ export default function TeleportUploadPage() {
                                         <AccordionContent>
                                             <div className="flex flex-col gap-2">
                                                 <label className="flex items-center gap-3 text-sm"><Checkbox checked={exportPly} onCheckedChange={(v)=>setExportPly(Boolean(v))} /> .ply</label>
-                                                <label className="flex items-center gap-3 text-sm"><Checkbox checked={false} disabled /> .sog <span className="text-xs text-muted-foreground">for Varjo pipelines – contact us</span></label>
+                                                <label className="flex items-center gap-3 text-sm"><Checkbox checked={false} disabled /> .sog <span className="text-xs text-muted-foreground"> <a
+                                                    href="https://teleport.varjo.com/product-pages/contact-us" className="underline">contact us</a> to enable this feature</span></label>
                                             </div>
                                         </AccordionContent>
                                     </AccordionItem>
@@ -608,15 +684,32 @@ export default function TeleportUploadPage() {
                             <Separator />
                             <div className="flex items-center justify-between text-sm">
                                 <span>time estimate</span>
-                                <span>{minutes} min</span>
+                                <span>{fileCount > 0 ? `${minutes} min` : "-"}</span>
+
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                                <span>cost estimate</span>
+                                <span>{fileCount > 0 ? `$${cost}` : "-"}</span>
+
                             </div>
                             <div className="flex items-center justify-between">
                                 <span className="text-sm">expected quality</span>
                                 <Badge variant={qual.intent as any}>{qual.label}</Badge>
                             </div>
                             <div>
-                                <div className="mb-1 text-xs text-muted-foreground">quota</div>
-                                <Progress value={Math.min(100, files.length/50*100)} />
+                                <div className="mb-1 text-xs text-muted-foreground">remaining quota</div>
+                                <Progress
+                                    // Use a self-executing function to generate a random value once
+                                    value={(function() {
+                                        // Create a random number between 0-20 that persists across renders
+                                        const randomStart = window.randomStartValue || (window.randomStartValue = Math.random() * 100);
+                                        // Add the cost to the random start and cap at 100
+                                        return Math.min(100, randomStart + parseFloat(cost) * 10);
+                                    })()}
+                                    className={parseFloat(cost) * 10 > 100 ? "!bg-red-500" : ""}
+                                />
+
+
                                 <div className="mt-1 text-xs text-muted-foreground">demo only</div>
                             </div>
                         </CardContent>

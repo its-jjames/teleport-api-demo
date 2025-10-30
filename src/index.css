@@ -157,3 +157,10 @@
     .animate-accordion-up   { animation: accordion-up   0.2s ease-out both }
   }
 }
+
+button[role="switch"][data-state="checked"] {
+  background-color: hsl(var(--foreground));
+}
+button[role="switch"][data-state="unchecked"] {
+  background-color: hsl(var(--muted-foreground));
+}
