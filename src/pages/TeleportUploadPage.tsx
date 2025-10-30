@@ -20,6 +20,9 @@ import { cn } from "@/lib/utils";
 // Types & presets
 const RES_CHOICES = [1600, 2500, 3200] as const;
 
+const randomQuotaStart = Math.random() * 90;
+
+
 const PRESETS = [
     { id: "fastest", name: "fastest", desc: "fast result for quick previews", res: 1600, iters: 7000, sh: 0 as 0|3, lod: true, splatAuto: true },
     { id: "balanced", name: "balanced", desc: "good quality without long waits", res: 2500, iters: 20000, sh: 0 as 0|3, lod: true, splatAuto: true },
@@ -697,15 +700,10 @@ export default function TeleportUploadPage() {
                             <div>
                                 <div className="mb-1 text-xs text-muted-foreground">remaining quota</div>
                                 <Progress
-                                    // Use a self-executing function to generate a random value once
-                                    value={(function() {
-                                        // Create a random number between 0-20 that persists across renders
-                                        const randomStart = window.randomStartValue || (window.randomStartValue = Math.random() * 100);
-                                        // Add the cost to the random start and cap at 100
-                                        return Math.min(100, randomStart + parseFloat(cost) * 10);
-                                    })()}
+                                    value={Math.min(100, randomQuotaStart + parseFloat(cost) * 10)}
                                     className={parseFloat(cost) * 10 > 100 ? "!bg-red-500" : ""}
                                 />
+
 
 
                                 <div className="mt-1 text-xs text-muted-foreground">demo only</div>
