@@ -450,7 +450,7 @@ export default function TeleportUploadPage() {
                                     <div>
                                         <Label htmlFor="name">name this capture</Label>
                                         <Input id="name" placeholder="e.g. lobby east wing" value={name} onChange={(e)=>setName(e.target.value)} />
-                                        <p className="mt-1 text-xs text-muted-foreground">used in links and search</p>
+
                                     </div>
                                     <div>
                                         <Label>tags (optional)</Label>
@@ -460,9 +460,7 @@ export default function TeleportUploadPage() {
 
                                 <div className="mt-6 flex items-center justify-between">
                                     <Button variant="secondary" onClick={()=>setStep(2)} disabled={!ready}>continue</Button>
-                                    {!ready && (
-                                        <div className="text-xs text-muted-foreground">missing: {missing.join(", ")}</div>
-                                    )}
+
                                 </div>
                             </CardContent>
                         </Card>
